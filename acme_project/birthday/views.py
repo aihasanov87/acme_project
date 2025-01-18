@@ -6,7 +6,6 @@ from .utils import calculate_birthday_countdown
 from .models import Birthday
 
 
-
 # Добавим опциональный параметр pk.
 def birthday(request, pk=None):
     # Если в запросе указан pk (если получен запрос на редактирование объекта):
@@ -18,9 +17,11 @@ def birthday(request, pk=None):
     else:
         # Связывать форму с объектом не нужно, установим значение None.
         instance = None
-    # Передаём в форму либо данные из запроса, либо None. 
+    # Передаём в форму либо данные из запроса, либо None.
     # В случае редактирования прикрепляем объект модели.
-    form = BirthdayForm(request.POST or None, instance=instance)
+    form = BirthdayForm(request.POST or None,
+                        files=request.FILES or None,
+                        instance=instance)
     # Остальной код без изменений.
     context = {'form': form}
     # Сохраняем данные, полученные из формы, и отправляем ответ:
@@ -30,7 +31,7 @@ def birthday(request, pk=None):
             form.cleaned_data['birthday']
         )
         context.update({'birthday_countdown': birthday_countdown})
-    return render(request, 'birthday/birthday.html', context) 
+    return render(request, 'birthday/birthday.html', context)
 
 
 def birthday_list(request):

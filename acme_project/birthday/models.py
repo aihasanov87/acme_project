@@ -1,6 +1,9 @@
 # birthday/models.py
 from django.db import models
 
+# Импортируется функция-валидатор.
+from .validators import real_age
+
 
 class Birthday(models.Model):
     first_name = models.CharField(verbose_name='Имя', max_length=20)
@@ -10,4 +13,20 @@ class Birthday(models.Model):
         help_text='Необязательное поле',
         max_length=20
     )
-    birthday = models.DateField(verbose_name='Дата рождения')
+    birthday = models.DateField(
+        verbose_name='Дата рождения',
+        validators=(real_age,))
+
+    image = models.ImageField(
+        verbose_name='Фото',
+        upload_to='birthdays_images',
+        blank=True)
+
+    class Meta:
+        # устанавливаем ограничения по классу = ограничения в БД
+        constraints = (
+            models.UniqueConstraint(
+                fields=('first_name', 'last_name', 'birthday'),
+                name='Unique person constraint',
+            ),
+        )
