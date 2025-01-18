@@ -1,4 +1,9 @@
 from django.shortcuts import get_object_or_404, redirect, render
+from django.core.paginator import Paginator
+from django.views.generic import (
+    CreateView, DeleteView, DetailView, ListView, UpdateView
+)
+from django.urls import reverse_lazy
 
 # Импортируем класс BirthdayForm, чтобы создать экземпляр формы.
 from .forms import BirthdayForm
@@ -33,13 +38,54 @@ def birthday(request, pk=None):
         context.update({'birthday_countdown': birthday_countdown})
     return render(request, 'birthday/birthday.html', context)
 
+# View класс вместо View функции birthday
+# Наследуем класс от встроенного CreateView:
+
+
+# class BirthdayUpdateView(UpdateView):
+#     model = Birthday
+#     form_class = BirthdayForm
+#     template_name = 'birthday/birthday.html'
+#     success_url = reverse_lazy('birthday:list')
 
 def birthday_list(request):
-    # Получаем все объекты модели Birthday из БД.
-    birthdays = Birthday.objects.all()
-    # Передаём их в контекст шаблона.
-    context = {'birthdays': birthdays}
+    # Получаем список всех объектов с сортировкой по id.
+    birthdays = Birthday.objects.order_by('id')
+    # Создаём объект пагинатора с количеством 10 записей на страницу.
+    paginator = Paginator(birthdays, 10)
+
+    # Получаем из запроса значение параметра page.
+    page_number = request.GET.get('page')
+    # Получаем запрошенную страницу пагинатора.
+    # Если параметра page нет в запросе или его значение не приводится к числу,
+    # вернётся первая страница.
+    page_obj = paginator.get_page(page_number)
+    # Вместо полного списка объектов передаём в контекст
+    # объект страницы пагинатора
+    context = {'page_obj': page_obj}
     return render(request, 'birthday/birthday_list.html', context)
+
+# View класс вместо View функции birthday_list
+# Наследуем класс от встроенного ListView:
+
+
+# class BirthdayListView(ListView):
+#     # Указываем модель, с которой работает CBV...
+#     model = Birthday
+#     # ...сортировку, которая будет применена при выводе списка объектов:
+#     ordering = '-id'
+#     # ...и даже настройки пагинации:
+#     paginate_by = 10
+
+    # Под капотом. Имя шаблона можно не указывать, если он назван
+    # по определённым правилам: наследники класса ListView ищут шаблон
+    # <название приложения>/<название модели>_list.html; шаблон,
+    # подготовленный для списка, назван именно так: birthday/birthday_list.html
+
+    # Словарь Context генерируется и передаётся под капотом.
+    # А содержит этот словарь объект страницы page_obj —
+    # это дефолтное название, под которым класс ListView передаёт
+    # объект страницы в шаблон.
 
 
 def delete_birthday(request, pk):
@@ -57,3 +103,69 @@ def delete_birthday(request, pk):
         return redirect('birthday:list')
     # Если был получен GET-запрос — отображаем форму.
     return render(request, 'birthday/birthday.html', context)
+
+
+class BirthdayListView(ListView):
+    # Указываем модель, с которой работает CBV...
+    model = Birthday
+    # ...сортировку, которая будет применена при выводе списка объектов:
+    ordering = '-id'
+    # ...и даже настройки пагинации:
+    paginate_by = 10
+
+    # Под капотом. Имя шаблона можно не указывать, если он назван
+    # по определённым правилам: наследники класса ListView ищут шаблон
+    # <название приложения>/<название модели>_list.html; шаблон,
+    # подготовленный для списка, назван именно так: birthday/birthday_list.html
+
+    # Словарь Context генерируется и передаётся под капотом.
+    # А содержит этот словарь объект страницы page_obj —
+    # это дефолтное название, под которым класс ListView передаёт
+    # объект страницы в шаблон.
+
+# Создаём миксин.
+
+
+# class BirthdayMixin:
+#     model = Birthday
+#     success_url = reverse_lazy('birthday:list')
+
+
+# class BirthdayFormMixin:
+#     form_class = BirthdayForm
+#     # template_name = 'birthday/birthday.html'
+
+
+# Добавляем миксин первым по списку родительских классов.
+class BirthdayCreateView(CreateView):
+    # Не нужно описывать атрибуты: все они унаследованы от BirthdayMixin.
+    model = Birthday
+    form_class = BirthdayForm
+    pass
+
+
+class BirthdayUpdateView(UpdateView):
+    # И здесь все атрибуты наследуются от BirthdayMixin.
+    model = Birthday
+    form_class = BirthdayForm
+    pass
+
+
+class BirthdayDeleteView(DeleteView):
+    model = Birthday
+    pass
+
+
+class BirthdayDetailView(DetailView):
+    model = Birthday
+
+    def get_context_data(self, **kwargs):
+        # Получаем словарь контекста:
+        context = super().get_context_data(**kwargs)
+        # Добавляем в словарь новый ключ:
+        context['birthday_countdown'] = calculate_birthday_countdown(
+            # Дату рождения берём из объекта в словаре context:
+            self.object.birthday
+        )
+        # Возвращаем словарь контекста.
+        return context
